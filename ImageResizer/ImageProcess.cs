@@ -4,6 +4,8 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 
+using System.Threading.Tasks;
+
 namespace ImageResizer
 {
     public class ImageProcess
@@ -37,9 +39,14 @@ namespace ImageResizer
         /// <param name="scale">縮放比例</param>
         public void ResizeImages(string sourcePath, string destPath, double scale)
         {
-            var allFiles = FindImages(sourcePath);
-            foreach (var filePath in allFiles)
+            string[] allFiles = FindImages(sourcePath).ToArray();
+            //List<Task> tasks = new List<Task>();
+            //foreach (var filePath in allFiles)
+            Parallel.For(0, allFiles.Length, pi =>
             {
+                string filePath = allFiles[pi];
+                //tasks.Add(Task.Run(() =>
+                //{
                 Image imgPhoto = Image.FromFile(filePath);
                 string imgName = Path.GetFileNameWithoutExtension(filePath);
 
@@ -48,14 +55,18 @@ namespace ImageResizer
 
                 int destionatonWidth = (int)(sourceWidth * scale);
                 int destionatonHeight = (int)(sourceHeight * scale);
-
-                Bitmap processedImage = processBitmap((Bitmap)imgPhoto,
+                Bitmap processedImage = (Bitmap)imgPhoto;
+                processBitmap(ref processedImage,
                     sourceWidth, sourceHeight,
                     destionatonWidth, destionatonHeight);
 
                 string destFile = Path.Combine(destPath, imgName + ".jpg");
                 processedImage.Save(destFile, ImageFormat.Jpeg);
-            }
+                //}));
+                //}
+            });
+
+            //Task.WaitAll(tasks.ToArray());
         }
 
         /// <summary>
@@ -81,7 +92,7 @@ namespace ImageResizer
         /// <param name="newWidth">新圖片的寬度</param>
         /// <param name="newHeight">新圖片的高度</param>
         /// <returns></returns>
-        Bitmap processBitmap(Bitmap img, int srcWidth, int srcHeight, int newWidth, int newHeight)
+        public void processBitmap(ref Bitmap img, int srcWidth, int srcHeight, int newWidth, int newHeight)
         {
             Bitmap resizedbitmap = new Bitmap(newWidth, newHeight);
             Graphics g = Graphics.FromImage(resizedbitmap);
@@ -92,7 +103,7 @@ namespace ImageResizer
                 new Rectangle(0, 0, newWidth, newHeight),
                 new Rectangle(0, 0, srcWidth, srcHeight),
                 GraphicsUnit.Pixel);
-            return resizedbitmap;
+            img =  resizedbitmap;
         }
     }
 }
